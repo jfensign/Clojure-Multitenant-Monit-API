@@ -8,7 +8,8 @@
                  [imintel/ring-xml "0.0.2"]
                  [incanter "1.5.5"]
                  [ring-cors "0.1.4"]
-                 [com.novemberain/monger "2.0.0-rc1"]]
+                 [com.novemberain/monger "2.0.0-rc1"]
+                 [rpas-cloud-sdk "0.1.0-SNAPSHOT"]]
   :plugins [[lein-ring "0.8.11"]]
   :ring {:handler tenancy.handler/app}
   :profiles

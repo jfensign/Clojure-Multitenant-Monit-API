@@ -6,15 +6,18 @@
             [ring.util.response :refer [resource-response response]]
             [ring.middleware.json :as middleware]
             [monger.core :as mongo]
-            [monger.collection :as mc]))
+            [monger.collection :as mc]
+            [rpas-cloud-sdk.core :as rpas]))
 
 
-(let [db_string "mongo-connection-string"
+(let [db_string "mongodb://api_rpas:Infotech2013@ds029839-a0.mongolab.com:29839/rpas-cloud"
       {:keys [conn db]} (mongo/connect-via-uri db_string)
       collections [:users :roles :contacts :contact_groups :research_types 
                    :data_sources :data_types :taxonomies :rated_items :coverage_lists 
                    :disclosures :disclosure_groups :workflows :products :product_groups 
-                   :templates :documents]]
+                   :templates :documents]
+      rpas-config (rpas/config {:token "b15086014994e06f4eddeb3cf5f6e98160e82c6e"
+                                :api-version "v1"})]
 
   (defn find-user-by-token
     [token]
@@ -110,10 +113,9 @@
   	([rated-items vis]
    		(let [primitives (into {} (pmap #(assoc {} % 0) (get-primitives)))
             base (primitive-utilization-per-tenant rated-items)
-         		flattened (for [[k v] base] (conj primitives (assoc v :ClientID k)))]
-     		(incanter.core/with-data
-        	(->> (incanter.core/dataset (into [] (keys (first flattened))) (into [] flattened))
-          		 (incanter.core/view))))))
+         		flattened (for [[k v] base] (conj primitives (assoc v :ClientID k)))
+            dataset (incanter.core/dataset (into [] (keys (first flattened))) (into [] flattened))]
+     		(incanter.core/with-data (->> dataset (incanter.core/view))))))
  
   (defn get-tenancy-totals
     ([]
@@ -125,12 +127,18 @@
      (let [query {:ClientID tenant-id}
            totals (reduce into {} (pmap #(assoc {} % (db-count (name %) query)) collections))]
        totals)))
-
+  
+  
   (defroutes api-routes
   	(GET "/" request (response {:Response "Welcome"}))
+    (GET "/sdk/:api" [api & r] (response 
+      (let [call (ns-resolve (symbol "rpas-cloud-sdk.core") (symbol api))]
+        (if (nil? r) 
+          (apply call r) 
+          (call)))))
   	(context "/tenants"
       []
-      (GET "/" request (response (get-tenancies)))
+      (GET "/" [] (response (get-tenancies)))
       (GET "/usage" [] (str "Received"))
       (GET "/totals" [] (response (get-tenancy-totals))))
   	(context "/tenants/:tenant-id"
